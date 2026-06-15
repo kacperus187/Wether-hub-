@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <button id="connect">Connect</button>
+        <div class="tocenter">
+            <div class="maincontent">
+                <div id="temp"></div>
+                <div id="feuchtigkeit"></div>
+                <div id="co2"></div>
+            </div>
+        </div>
+        
+        
+        <script>
+        let port;
+        let reader;
+        async function connectSerial() {
+            try {
+                document.getElementById("connect").remove();
+                port = await navigator.serial.requestPort();
+
+                await port.open({
+                    baudRate: 9600
+                });
+
+                console.log("Port opened");
+
+                await new Promise(r => setTimeout(r, 3000));
+                const decoder = new TextDecoderStream();
+                port.readable.pipeTo(decoder.writable);
+                reader = decoder.readable.getReader();
+
+                let buffer = "";
+
+                while(true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        break;
+                    }
+
+                    if(value) {
+                        buffer += value;
+
+                        let lines = buffer.split("\n");
+                        buffer = lines.pop();
+
+                        for(let line of lines) {
+                            line = line.trim();
+                            if(line.length > 0) {
+                                console.log("FULL LINE:", line);
+                                const parts = line.split("__");
+                                console.log(parts);
+                                // document.getElementById("output").textContent = line;
+
+                                document.getElementById("temp").innerHTML = parts[1] + " ° C";
+                                document.getElementById("feuchtigkeit").innerHTML = "Luftfeuchtigkeit: " + parts[2] + "%";
+                                document.getElementById("co2").innerHTML = "CO2: " + parts[3];
+                                // console.log(parts[1]);
+
+                                // var valueTemp = parts[1];
+                                // var valueFeuchtigkeit = parts[1];
+                                // var valueCO2 = parts[2];
+
+                                // tempBox.textContent = valueTemp + " ° C";
+                                // fuchtigkeitBox.textContent = "Luftfeuchtigkeit: " + valueFeuchtigkeit;
+                                // co2Box.textContent = "CO2: " + valueCO2;
+
+                            }
+                        }
+                    }
+                }
+
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
+        document.getElementById("connect").onclick = connectSerial;
+        </script>
+        <style>
+            html, body {
+                padding: 0px;
+                margin: 0px;
+                height: 100vh;
+                width: 100vw;
+            }
+
+            body {
+                background-image: url("img1.jpg");
+                background-repeat: no-repeat;
+            }
+
+            .maincontent {
+                width: 20%;
+                padding: 30px 50px;
+                background-color: #101010;
+                opacity: 0.6;
+                margin: 0px;
+                border-radius: 30px;
+                box-shadow: 10px 10px 40px #101010;
+            }
+
+            #temp, #co2, #feuchtigkeit {
+                color: white;
+                font-style: bold;
+                font-family: "Archivo Black", Arial, Helvetica, sans-serif;
+                font-size: 24px;
+            }
+
+            .tocenter {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+        </style>
+    </body>
+</html>
